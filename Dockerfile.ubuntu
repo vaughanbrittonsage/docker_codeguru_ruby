@@ -1,0 +1,60 @@
+FROM cloudgear/ubuntu:14.04
+
+RUN apt-get update -yq && apt-get install -yq sudo
+
+#ssh
+RUN apt-get update && apt-get install -y openssh-server
+#cleanup
+RUN rm -rf /var/lib/apt/lists/* && \
+        truncate -s 0 /var/log/*log
+
+RUN apt-get clean
+
+RUN mkdir /var/run/sshd
+RUN echo 'root:development' | chpasswd
+RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# SSH login fix. Otherwise user is kicked off after login
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+RUN apt-get update -q && apt-get install -yq --no-install-recommends \
+        autoconf \
+        ca-certificates \
+        g++ \
+        gcc \
+        libc6-dev \
+        make \
+        patch \
+        libbz2-dev \
+        libcurl4-openssl-dev \
+        libevent-dev \
+        libffi-dev \
+        libglib2.0-dev \
+        libncurses-dev \
+        libpq-dev \
+        libreadline-dev \
+        libssl-dev \
+        libxml2-dev \
+        libxslt-dev \
+        libyaml-dev \
+        zlib1g-dev && \
+
+    # clean up
+    rm -rf /var/lib/apt/lists/* && \
+    truncate -s 0 /var/log/*log
+
+# Install Ruby
+ENV RUBY_VERSION=2.3.0
+RUN wget ftp://ftp.ruby-lang.org/pub/ruby/2.3/ruby-$RUBY_VERSION.tar.gz && \
+    tar xvzf ruby-$RUBY_VERSION.tar.gz && rm ruby-$RUBY_VERSION.tar.gz && \
+    cd ruby-$RUBY_VERSION && ./configure --disable-install-doc --prefix=/usr/local && make && make install && \
+    cd .. && rm -rf ruby-$RUBY_VERSION && \
+    ruby --version
+
+# Install RubyGems
+ENV RUBYGEMS_VERSION=2.4.8
+RUN wget https://rubygems.org/rubygems/rubygems-$RUBYGEMS_VERSION.tgz && \
+    tar xvzf rubygems-$RUBYGEMS_VERSION.tgz && rm rubygems-$RUBYGEMS_VERSION.tgz && \
+    cd rubygems-$RUBYGEMS_VERSION/ && ruby setup.rb && \
+    cd .. && rm -rf rubygems-$RUBYGEMS_VERSION && \
+    gem --version
